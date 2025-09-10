@@ -500,3 +500,4 @@ if __name__ == "__main__":
         run_alarm_tester()
     else:
         print("Invalid mode selection.")
+    
