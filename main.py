@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 import requests
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from calculated_telemetry import router as calc_router
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +16,9 @@ logger = logging.getLogger("main")
 
 # --- App ---
 app = FastAPI(title="TB API Backend", version="1.0.0")
+app.include_router(calc_router)
+app = FastAPI(title="TB API Backend", version="1.0.0")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,7 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# ✅ ADD THIS
+from calculated_telemetry import router as calc_router
+app.include_router(calc_router)
 # Supports either:
 #  - TB_ACCOUNTS='{"account1":"https://thingsboard.cloud","account2":"https://thingsboard.cloud"}'
 #  - TB_BASE_URL='https://thingsboard.cloud' (fallback)
@@ -56,7 +62,6 @@ def try_include_router(module_name: str, attr: str = "router"):
 
 try_include_router("report_logic")
 try_include_router("alarm_logic")
-try_include_router("calculated_telemetry")
 
 
 def start_alarm_scheduler():
