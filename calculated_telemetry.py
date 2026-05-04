@@ -21,12 +21,9 @@ except json.JSONDecodeError:
 logger.info(f"[INIT] Loaded ThingsBoard accounts: {list(ACCOUNTS.keys())}")
 
 
-device_state = {}  
-floor_door_counts = {}  
-floor_door_durations = {}  
-
-from pydantic import BaseModel, Field
-from typing import Optional
+device_state = {}
+floor_door_counts = {}
+floor_door_durations = {}
 
 class TelemetryPayload(BaseModel):
     deviceName: str = Field(...)
@@ -132,4 +129,21 @@ async def calculate_telemetry(
     return {
         "status": "success",
         "calculated": calculated_values
+    }
+
+
+@router.get("/calculated-telemetry/")
+def calculated_telemetry_info():
+    return {
+        "status": "ready",
+        "description": "Send POST requests to this endpoint with telemetry payload and X-Account-Id header.",
+        "example_payload": {
+            "deviceName": "Device 1",
+            "device_token": "abc123",
+            "current_floor_index": 1,
+            "lift_status": "idle",
+            "door_open": False,
+            "ts": 1714521600000
+        },
+        "required_headers": ["Authorization", "X-Account-Id"]
     }
