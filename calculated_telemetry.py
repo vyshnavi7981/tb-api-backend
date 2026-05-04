@@ -7,7 +7,7 @@ import os
 import json
 import requests
 
-from vibrationcode import process_vibration
+from Vibrationcode import process_vibration
 
 router = APIRouter()
 logger = logging.getLogger("calculated_telemetry")
