@@ -5,12 +5,12 @@ from typing import Optional
 import time
 import os
 import json
+import requests
 
 from vibrationcode import process_vibration
 
 router = APIRouter()
 logger = logging.getLogger("calculated_telemetry")
-
 
 # Load accounts
 try:
@@ -22,12 +22,10 @@ except json.JSONDecodeError:
 
 logger.info(f"[INIT] Loaded ThingsBoard accounts: {list(ACCOUNTS.keys())}")
 
-
 # In-memory state
 device_state = {}
 floor_door_counts = {}
 floor_door_durations = {}
-
 
 # Payload Model
 class TelemetryPayload(BaseModel):
@@ -38,7 +36,7 @@ class TelemetryPayload(BaseModel):
     door_open: Optional[bool] = False
     ts: Optional[int] = None
 
-    # ✅ Vibration inputs
+    # Vibration inputs
     x: Optional[float] = 0
     y: Optional[float] = 0
     z: Optional[float] = 0
@@ -68,7 +66,7 @@ async def calculate_telemetry(
             "last_idle_outside_ts": None,
             "total_idle_outside": 0,
             "last_floor": floor,
-            "prev_acc_mag": None  # ✅ store vibration history
+            "prev_acc_mag": None
         }
 
     if device_key not in floor_door_counts:
@@ -104,7 +102,7 @@ async def calculate_telemetry(
         state["last_idle_home_ts"] = None
         state["last_idle_outside_ts"] = None
 
-    # Floor initialization
+    # Floor init
     if floor not in floor_door_counts[device_key]:
         floor_door_counts[device_key][floor] = 0
 
@@ -139,7 +137,7 @@ async def calculate_telemetry(
     }
 
     # =========================
-    # ✅ VIBRATION LOGIC
+    # VIBRATION LOGIC
     # =========================
     vib_msg = {
         "x": payload.x,
@@ -154,32 +152,30 @@ async def calculate_telemetry(
 
     vib_result = process_vibration(vib_msg, metadata)
 
-    # Store latest value for next request
+    # Store for next request
     state["prev_acc_mag"] = vib_result["msg"]["acc_mag"]
 
-   # Add vibration results
-calculated_values.update({
-    "acc_mag": vib_result["msg"]["acc_mag"],
-    "vibration_score": vib_result["msg"]["vibration_score"],
-    "is_vibrating": vib_result["msg"]["is_vibrating"],
-    "vibration_level": vib_result["msg"]["vibration_level"]
-})
+    # Add vibration results
+    calculated_values.update({
+        "acc_mag": vib_result["msg"]["acc_mag"],
+        "vibration_score": vib_result["msg"]["vibration_score"],
+        "is_vibrating": vib_result["msg"]["is_vibrating"],
+        "vibration_level": vib_result["msg"]["vibration_level"]
+    })
 
-# ✅ SEND TO THINGSBOARD (your code here)
-import requests
-tb_url = f"https://thingsboard.cloud/api/v1/{payload.device_token}/telemetry"
+    # SEND TO THINGSBOARD
+    tb_url = f"https://thingsboard.cloud/api/v1/{payload.device_token}/telemetry"
 
-try:
-    res = requests.post(tb_url, json=calculated_values, timeout=10)
-    logger.info(f"TB response: {res.status_code} {res.text}")
-except Exception as e:
-    logger.error(f"TB send failed: {e}")
+    try:
+        res = requests.post(tb_url, json=calculated_values, timeout=10)
+        logger.info(f"TB response: {res.status_code} {res.text}")
+    except Exception as e:
+        logger.error(f"TB send failed: {e}")
 
-# ✅ RETURN
-return {
-    "status": "success",
-    "calculated": calculated_values
-}
+    return {
+        "status": "success",
+        "calculated": calculated_values
+    }
 
 
 @router.get("/calculated-telemetry/")
